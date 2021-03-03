@@ -1,0 +1,794 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- saved from url=(0036)https://cc65.github.io/doc/da65.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+ <link rel="stylesheet" type="text/css" href="./da65 Users Guide_files/doc.css">
+ <meta name="GENERATOR" content="LinuxDoc-Tools 0.9.71">
+ <title>da65 Users Guide</title>
+</head>
+<body>
+<h1>da65 Users Guide</h1>
+
+<h2>
+<a href="mailto:uz@cc65.org">Ullrich von Bassewitz</a>,<br>
+<a href="mailto:greg.king5@verizon.net">Greg King</a></h2>
+<hr>
+<em>da65 is a 6502/65C02 disassembler that is able to read user-supplied
+information about its input data, for better results. The output is ready for
+feeding into ca65, the macro assembler supplied with the cc65 C compiler.</em>
+<hr>
+<p>
+</p><h2><a name="toc1">1.</a> <a href="#s1">Overview</a></h2>
+
+<p>
+</p><h2><a name="toc2">2.</a> <a href="#s2">Usage</a></h2>
+
+<ul>
+<li><a name="toc2.1">2.1</a> <a href="#ss2.1">Command line option overview</a>
+</li><li><a name="toc2.2">2.2</a> <a href="#ss2.2">Command line options in detail</a>
+</li></ul>
+<p>
+</p><h2><a name="toc3">3.</a> <a href="#s3">Detailed workings</a></h2>
+
+<ul>
+<li><a name="toc3.1">3.1</a> <a href="#ss3.1">Supported CPUs</a>
+</li><li><a name="toc3.2">3.2</a> <a href="#ss3.2">Attribute map</a>
+</li><li><a name="toc3.3">3.3</a> <a href="#ss3.3">Labels</a>
+</li><li><a name="toc3.4">3.4</a> <a href="#ss3.4">Info File</a>
+</li></ul>
+<p>
+</p><h2><a name="toc4">4.</a> <a href="#s4">Info File Format</a></h2>
+
+<ul>
+<li><a name="toc4.1">4.1</a> <a href="#ss4.1">Comments</a>
+</li><li><a name="toc4.2">4.2</a> <a href="#ss4.2">Specifying global options</a>
+</li><li><a name="toc4.3">4.3</a> <a href="#ss4.3">Specifying Ranges</a>
+</li><li><a name="toc4.4">4.4</a> <a href="#ss4.4">Specifying Labels</a>
+</li><li><a name="toc4.5">4.5</a> <a href="#ss4.5">Specifying Segments</a>
+</li><li><a name="toc4.6">4.6</a> <a href="#ss4.6">Specifying Assembler Includes</a>
+</li><li><a name="toc4.7">4.7</a> <a href="#ss4.7">An Info File Example</a>
+</li></ul>
+<p>
+</p><h2><a name="toc5">5.</a> <a href="#s5">Copyright</a></h2>
+
+
+<hr>
+<h2><a name="s1">1.</a> <a href="#toc1">Overview</a></h2>
+
+
+<p>da65 is a disassembler for 6502/65C02 code. It is supplied as a utility with
+the cc65 C compiler and generates output that is suitable for the ca65
+macro assembler.</p>
+<p>Besides generating output for ca65, one of the design goals was that the user
+is able to feed additional information about the code into the disassembler,
+for improved results. This information may include the location and size of
+tables, and their format.</p>
+<p>One nice advantage of this concept is that disassembly of copyrighted binaries
+may be handled without problems: One can just pass the information file for
+disassembling the binary, so everyone with a legal copy of the binary can
+generate a nicely formatted disassembly with readable labels and other
+information.</p>
+
+
+<h2><a name="s2">2.</a> <a href="#toc2">Usage</a></h2>
+
+
+
+
+<h2><a name="ss2.1">2.1</a> <a href="#toc2.1">Command line option overview</a>
+</h2>
+
+
+<p>The assembler accepts the following options:</p>
+<p>
+</p><blockquote><code>
+<pre>---------------------------------------------------------------------------
+Usage: da65 [options] [inputfile]
+Short options:
+  -g                    Add debug info to object file
+  -h                    Help (this text)
+  -i name               Specify an info file
+  -o name               Name the output file
+  -v                    Increase verbosity
+  -F                    Add formfeeds to the output
+  -s                    Accept line markers in the info file
+  -S addr               Set the start/load address
+  -V                    Print the disassembler version
+
+Long options:
+  --argument-column n   Specify argument start column
+  --comment-column n    Specify comment start column
+  --comments n          Set the comment level for the output
+  --cpu type            Set cpu type
+  --debug-info          Add debug info to object file
+  --formfeeds           Add formfeeds to the output
+  --help                Help (this text)
+  --hexoffs             Use hexadecimal label offsets
+  --info name           Specify an info file
+  --label-break n       Add newline if label exceeds length n
+  --mnemonic-column n   Specify mnemonic start column
+  --pagelength n        Set the page length for the listing
+  --start-addr addr     Set the start/load address
+  --sync-lines          Accept line markers in the info file
+  --text-column n       Specify text start column
+  --verbose             Increase verbosity
+  --version             Print the disassembler version
+---------------------------------------------------------------------------
+</pre>
+</code></blockquote>
+<p></p>
+
+
+<h2><a name="ss2.2">2.2</a> <a href="#toc2.2">Command line options in detail</a>
+</h2>
+
+
+<p>Here is a description of all the command line options:</p>
+<p>
+</p><dl>
+<p>
+<a name="option--argument-column"></a> </p>
+<dt><b><code>--argument-column n</code></b></dt><dd>
+<p>Specifies the column where the argument for a mnemonic or pseudo instruction
+starts.</p>
+
+<p>
+<a name="option--comment-column"></a> </p>
+</dd><dt><b><code>--comment-column n</code></b></dt><dd>
+<p>Specifies the column where the comment for an instruction starts.</p>
+
+<p>
+<a name="option--comments"></a> </p>
+</dd><dt><b><code>--comments n</code></b></dt><dd>
+<p>Set the comment level for the output. Valid arguments are 0..4. Greater
+values will increase the level of additional information written to the
+output file in form of comments.</p>
+
+<p>
+<a name="option--cpu"></a> </p>
+</dd><dt><b><code>--cpu type</code></b></dt><dd>
+<p>Set the CPU type. The option takes a parameter, which may be one of
+</p><ul>
+<li>6502</li>
+<li>6502x</li>
+<li>6502dtv</li>
+<li>65sc02</li>
+<li>65c02</li>
+<li>huc6280</li>
+<li>4510</li>
+</ul>
+<p></p>
+<p>6502x is for the NMOS 6502 with unofficial opcodes. 6502dtv is for the 
+emulated CPU of the C64DTV device. huc6280 is the CPU of the PC engine. 
+4510 is the CPU of the Commodore C65. Support for the 65816 currently 
+is not available.</p>
+
+<p>
+<a name="option--formfeeds"></a> </p>
+</dd><dt><b><code>-F, --formfeeds</code></b></dt><dd>
+<p>Add formfeeds to the generated output. This feature is useful together
+with the <code>
+<a href="#option--pagelength">--pagelength</a></code> option.
+If <code>--formfeeds</code> is given, a formfeed is added to the output after each
+page.</p>
+
+
+</dd><dt><b><code>-g, --debug-info</code></b></dt><dd>
+<p>This option adds the <code>.DEBUGINFO</code> command to the output file, so the
+assembler will generate debug information when re-assembling the generated
+output.</p>
+
+
+</dd><dt><b><code>-h, --help</code></b></dt><dd>
+<p>Print the short option summary shown above.</p>
+
+<p>
+<a name="option--hexoffs"></a> </p>
+</dd><dt><b><code>--hexoffs</code></b></dt><dd>
+<p>Output label offsets in hexadecimal instead of decimal notation.</p>
+
+<p>
+<a name="option--info"></a> </p>
+</dd><dt><b><code>-i name, --info name</code></b></dt><dd>
+<p>Specify an info file. The info file contains global options that may
+override or replace command line options plus informations about the code
+that has to be disassembled. See the separate section 
+<a href="#infofile">Info File Format</a>.</p>
+
+<p>
+<a name="option-o"></a> </p>
+</dd><dt><b><code>-o name</code></b></dt><dd>
+<p>Specify a name for an output file. The default is to use <code>stdout</code>, so
+without this switch or the corresponding 
+<a href="#global-options">global option</a> <code>
+<a href="#OUTPUTNAME">OUTPUTNAME</a></code>,
+the output will go to the terminal.</p>
+
+<p>
+<a name="option--label-break"></a> </p>
+</dd><dt><b><code>--label-break n</code></b></dt><dd>
+<p>Adds a newline if the length of a label exceeds the given length.
+Note: If the label would run into the code in the mid column, a
+linefeed is always inserted regardless of this setting.</p>
+<p>This option overrides the 
+<a href="#global-options">global option</a>
+<code>
+<a href="#LABELBREAK">LABELBREAK</a></code>.</p>
+
+<p>
+<a name="option--mnemonic-column"></a> </p>
+</dd><dt><b><code>--mnemonic-column n</code></b></dt><dd>
+<p>Specifies the column where a mnemonic or pseudo instrcuction is output.</p>
+
+<p>
+<a name="option--pagelength"></a> </p>
+</dd><dt><b><code>--pagelength n</code></b></dt><dd>
+<p>Sets the length of a listing page in lines. After this number of lines, a
+new page header is generated. If the <code>
+<a href="#option--formfeeds">--formfeeds</a></code> is also given, a formfeed is inserted before
+generating the page header.</p>
+<p>A value of zero for the page length will disable paging of the output.</p>
+
+<p>
+<a name="option--start-addr"></a> </p>
+</dd><dt><b><code>-S addr, --start-addr addr</code></b></dt><dd>
+<p>Specify the start/load address of the binary code that is going to be
+disassembled. The given address is interpreted as an octal value if
+preceded with a '0' digit, as a hexadecimal value if preceded
+with '0x', '0X', or '$', and as a decimal value in all other cases. If no
+start address is specified, $10000 minus the size of the input file is used.</p>
+
+<p>
+<a name="option--sync-lines"></a> </p>
+</dd><dt><b><code>-s, --sync-lines</code></b></dt><dd>
+<p>Accept line markers in the info file in the following syntax:
+</p><blockquote><code>
+<pre>#line &lt;lineno&gt; ["&lt;filename&gt;"]
+# &lt;lineno&gt; "&lt;filename&gt;" [&lt;flag&gt;] ...
+</pre>
+</code></blockquote>
+
+This option is intended for preprocessing info files with "cpp" or "m4".<p></p>
+
+<p>
+<a name="option--text-column"></a> </p>
+</dd><dt><b><code>--text-column n</code></b></dt><dd>
+<p>Specifies the column where additional text is output. This additional text
+consists of the bytes encoded in this line in text representation.</p>
+
+
+</dd><dt><b><code>-v, --verbose</code></b></dt><dd>
+<p>Increase the disassembler verbosity. Usually only needed for debugging
+purposes. You may use this option more than one time for even more
+verbose output.</p>
+
+
+</dd><dt><b><code>-V, --version</code></b></dt><dd>
+<p>Print the version number of the assembler. If you send any suggestions
+or bugfixes, please include the version number.</p>
+
+</dd></dl>
+<p></p>
+
+
+
+<h2><a name="s3">3.</a> <a href="#toc3">Detailed workings</a></h2>
+
+
+
+<h2><a name="ss3.1">3.1</a> <a href="#toc3.1">Supported CPUs</a>
+</h2>
+
+
+<p>The default (no CPU given on the command line or in the <code>GLOBAL</code> section of
+the info file) is the 6502 CPU. The disassembler knows all "official" opcodes
+for this CPU. Invalid opcodes are translated into <code>.byte</code> commands.</p>
+<p>With the command line option <code>
+<a href="#option--cpu">--cpu</a></code>, the
+disassembler may be told to recognize either the 65SC02 or 65C02 CPUs. The
+latter understands the same opcodes as the former, plus 16 additional bit
+manipulation and bit test-and-branch commands. Using 6502x as CPU the illegal 
+opcodes of 6502 CPU are detected and displayed. 6502dtv setting recognizes the 
+emulated CPU instructons of the C64DTV device.</p>
+
+<p>When disassembling 4510 code, due to handling of 16-bit wide branches, da65
+can produce output that can not be re-assembled, when one or more of those
+branches point outside of the disassembled memory. This can happen when text
+or binary data is processed.</p>
+<p>While there is some code for the 65816 in the sources, it is currently
+unsupported.</p>
+
+
+<h2><a name="ss3.2">3.2</a> <a href="#toc3.2">Attribute map</a>
+</h2>
+
+
+<p>The disassembler works by creating an attribute map for the whole address
+space ($0000 - $FFFF). Initially, all attributes are cleared. Then, an
+external info file (if given) is read. Disassembly is done in several passes.
+In all passes, with the exception of the last one, information about the
+disassembled code is gathered and added to the symbol and attribute maps. The
+last pass generates output using the information from the maps.</p>
+
+<h2><a name="ss3.3">3.3</a> <a href="#toc3.3">Labels</a>
+</h2>
+
+
+<p>Some instructions may generate labels in the first pass, while most other
+instructions do not generate labels, but use them if they are available. Among
+others, the branch and jump instructions will generate labels for the target
+of the branch in the first pass. External labels (taken from the info file)
+have precedence over internally generated ones, They must be valid identifiers
+as specified for the ca65 assembler. Internal labels (generated by the
+disassembler) have the form <code>Labcd</code>, where <code>abcd</code> is the hexadecimal
+address of the label in upper case letters. You should probably avoid using
+such label names for external labels.</p>
+
+
+<h2><a name="ss3.4">3.4</a> <a href="#toc3.4">Info File</a>
+</h2>
+
+
+<p>The info file is used to pass additional information about the input code to
+the disassembler. This includes label names, data areas or tables, and global
+options like input and output file names. See the 
+<a href="#infofile">next section</a> for more information.</p>
+
+
+
+<h2><a name="infofile"></a> <a name="s4">4.</a> <a href="#toc4">Info File Format</a></h2>
+
+
+<p>The info file contains lists of specifications grouped together. Each group
+directive has an identifying token and an attribute list enclosed in curly
+braces. Attributes have a name followed by a value. The syntax of the value
+depends on the type of the attribute. String attributes are places in double
+quotes, numeric attributes may be specified as decimal numbers or hexadecimal
+with a leading dollar sign. There are also attributes where the attribute
+value is a keyword; in this case, the keyword is given as-is (without quotes or
+anything). Each attribute is terminated by a semicolon.</p>
+<p>
+</p><blockquote><code>
+<pre>        group-name { attribute1 attribute-value; attribute2 attribute-value; }
+</pre>
+</code></blockquote>
+<p></p>
+
+
+<h2><a name="ss4.1">4.1</a> <a href="#toc4.1">Comments</a>
+</h2>
+
+
+<p>Comments start with a hash mark (<code>#</code>) or a double slash (<code>//</code>);
+and, extend from the position of the mark to the end of the current line.
+Hash marks or double slashes inside of strings will <em>not</em> start a comment,
+of course.</p>
+
+
+<h2><a name="global-options"></a> <a name="ss4.2">4.2</a> <a href="#toc4.2">Specifying global options</a>
+</h2>
+
+
+<p>Global options may be specified in a group with the name <code>GLOBAL</code>. The
+following attributes are recognized:</p>
+<p>
+</p><dl>
+
+<dt><b><code>ARGUMENTCOLUMN</code></b></dt><dd>
+<p>This attribute specifies the column in the output, where the argument for
+an opcode or pseudo instruction starts. The corresponding command line
+option is
+<code>
+<a href="#option--argument-column">--argument-column</a></code>.</p>
+
+
+</dd><dt><b><code>COMMENTCOLUMN</code></b></dt><dd>
+<p>This attribute specifies the column in the output, where the comment starts
+in a line. It is only used for in-line comments. The corresponding command
+line option is
+<code>
+<a href="#option--comment-column">--comment-column</a></code>.</p>
+
+<p>
+<a name="COMMENTS"></a> </p>
+</dd><dt><b><code>COMMENTS</code></b></dt><dd>
+<p>This attribute may be used instead of the <code>
+<a href="#option--comments">--comments</a></code> option on the command line. It takes a numerical
+parameter between 0 and 4. Higher values increase the amount of information
+written to the output file in form of comments.</p>
+
+
+</dd><dt><b><code>CPU</code></b></dt><dd>
+<p>This attribute may be used instead of the <code>
+<a href="#option--cpu">--cpu</a></code> option on the command line. For possible values see
+there. The value is a string and must be enclosed in quotes.</p>
+
+
+</dd><dt><b><code>HEXOFFS</code></b></dt><dd>
+<p>The attribute is followed by a boolean value. If true, offsets to labels are
+output in hex, otherwise they're output in decimal notation. The default is
+false. The attribute may be changed on the command line using the <code>
+<a href="#option--hexoffs">--hexoffs</a></code> option.</p>
+
+
+</dd><dt><b><code>INPUTNAME</code></b></dt><dd>
+<p>The attribute is followed by a string value, which gives the name of the
+input file to read. If it is present, the disassembler does not accept an
+input file name on the command line.</p>
+
+
+</dd><dt><b><code>INPUTOFFS</code></b></dt><dd>
+<p>The attribute is followed by a numerical value that gives an offset into
+the input file which is skipped before reading data. The attribute may be
+used to skip headers or unwanted code sections in the input file.</p>
+
+
+</dd><dt><b><code>INPUTSIZE</code></b></dt><dd>
+<p><code>INPUTSIZE</code> is followed by a numerical value that gives the amount of
+data to read from the input file. Data beyond <code>INPUTOFFS + INPUTSIZE</code>
+is ignored.</p>
+
+<p>
+<a name="LABELBREAK"></a> </p>
+</dd><dt><b><code>LABELBREAK</code></b></dt><dd>
+<p><code>LABELBREAK</code> is followed by a numerical value that specifies the label
+length that will force a newline. To have all labels on their own lines,
+you may set this value to zero.</p>
+<p>See also the <code>
+<a href="#option--label-break">--label-break</a></code>
+command line option. A <code>LABELBREAK</code> statement in the info file will
+override any value given on the command line.</p>
+
+
+</dd><dt><b><code>MNEMONICCOLUMN</code></b></dt><dd>
+<p>This attribute specifies the column in the output, where the mnemonic or
+pseudo instruction is placed. The corresponding command line option is
+<code>
+<a href="#option--mnemonic-column">--mnemonic-column</a></code>.</p>
+
+
+</dd><dt><b><code>NEWLINEAFTERJMP</code></b></dt><dd>
+<p>This attribute is followed by a boolean value. When true, a newline is
+inserted after each <code>JMP</code> instruction. The default is false.</p>
+
+
+</dd><dt><b><code>NEWLINEAFTERRTS</code></b></dt><dd>
+<p>This attribute is followed by a boolean value. When true, a newline is
+inserted after each <code>RTS</code> instruction. The default is false.</p>
+
+<p>
+<a name="OUTPUTNAME"></a> </p>
+</dd><dt><b><code>OUTPUTNAME</code></b></dt><dd>
+<p>The attribute is followed by string value, which gives the name of the
+output file to write. If it is present, specification of an output file on
+the command line using the <code>
+<a href="#option-o">-o</a></code> option is
+not allowed.</p>
+<p>The default is to use <code>stdout</code> for output, so without this attribute or
+the corresponding command line option <code>
+<a href="#option-o">-o</a></code>
+the output will go to the terminal.</p>
+
+
+</dd><dt><b><code>PAGELENGTH</code></b></dt><dd>
+<p>This attribute may be used instead of the <code>
+<a href="#option--pagelength">--pagelength</a></code> option on the command line. It takes a numerical
+parameter. Using zero as page length (which is the default) means that no
+pages are generated.</p>
+
+
+</dd><dt><b><code>STARTADDR</code></b></dt><dd>
+<p>This attribute may be used instead of the <code>
+<a href="#option--start-addr">--start-addr</a></code> option on the command line. It takes a numerical
+parameter. The default for the start address is $10000 minus the size of
+the input file (this assumes that the input file is a ROM that contains the
+reset and irq vectors).</p>
+
+
+</dd><dt><b><code>TEXTCOLUMN</code></b></dt><dd>
+<p>This attribute specifies the column, where the data bytes are output
+translated into ASCII text. It is only used if
+<code>
+<a href="#COMMENTS">COMMENTS</a></code> is set to at least 4. The
+corresponding command line option is
+<code>
+<a href="#option--text-column">--text-column</a></code>.</p>
+
+</dd></dl>
+<p></p>
+
+
+<h2><a name="ss4.3">4.3</a> <a href="#toc4.3">Specifying Ranges</a>
+</h2>
+
+
+<p>The <code>RANGE</code> directive is used to give information about address ranges. The
+following attributes are recognized:</p>
+<p>
+</p><dl>
+
+<dt><b><code>COMMENT</code></b></dt><dd>
+<p>This attribute is only allowed if a label is also given. It takes a string
+as argument. See the description of the <code>
+<a href="#infofile-label">LABEL</a></code> directive for an explanation.</p>
+
+</dd><dt><b><code>END</code></b></dt><dd>
+<p>This gives the end address of the range. The end address is inclusive, that
+means, it is part of the range. Of course, it may not be smaller than the
+start address.</p>
+
+</dd><dt><b><code>NAME</code></b></dt><dd>
+<p>This is a convenience attribute. It takes a string argument and will cause
+the disassembler to define a label for the start of the range with the
+given name. So a separate <code>
+<a href="#infofile-label">LABEL</a></code>
+directive is not needed.</p>
+
+</dd><dt><b><code>START</code></b></dt><dd>
+<p>This gives the start address of the range.</p>
+
+</dd><dt><b><code>TYPE</code></b></dt><dd>
+<p>This attribute specifies the type of data within the range. The attribute
+value is one of the following keywords:</p>
+<p>
+</p><dl>
+<dt><b><code>ADDRTABLE</code></b></dt><dd>
+<p>The range consists of data and is disassembled as a table of words
+(16 bit values). The difference to the <code>WORDTABLE</code> type is that
+a label is defined for each entry in the table.</p>
+
+</dd><dt><b><code>BYTETABLE</code></b></dt><dd>
+<p>The range consists of data and is disassembled as a byte table.</p>
+
+</dd><dt><b><code>CODE</code></b></dt><dd>
+<p>The range consists of code.</p>
+
+</dd><dt><b><code>DBYTETABLE</code></b></dt><dd>
+<p>The range consists of data and is disassembled as a table of dbytes
+(double byte values, 16 bit values with the low byte containing the
+most significant byte of the 16 bit value).</p>
+
+</dd><dt><b><code>DWORDTABLE</code></b></dt><dd>
+<p>The range consists of data and is disassembled as a table of double
+words (32 bit values).</p>
+
+</dd><dt><b><code>RTSTABLE</code></b></dt><dd>
+<p>The range consists of data and is disassembled as a table of words (16 bit
+values). The values are interpreted as words that are pushed onto the
+stack and jump to it via <code>RTS</code>. This means that they contain
+<code>address-1</code> of a function, for which a label will get defined by the
+disassembler.</p>
+
+</dd><dt><b><code>SKIP</code></b></dt><dd>
+<p>The range is simply ignored when generating the output file. Please note
+that this means that reassembling the output file will <em>not</em> generate
+the original file, not only because the missing piece in between, but also
+because the following code will be located on wrong addresses. Output
+generated with <code>SKIP</code> ranges will need manual rework.</p>
+
+</dd><dt><b><code>TEXTTABLE</code></b></dt><dd>
+<p>The range consists of readable text.</p>
+
+</dd><dt><b><code>WORDTABLE</code></b></dt><dd>
+<p>The range consists of data and is disassembled as a table of words
+(16 bit values).</p>
+
+</dd></dl>
+<p></p>
+
+</dd></dl>
+<p></p>
+
+
+<h2><a name="infofile-label"></a> <a name="ss4.4">4.4</a> <a href="#toc4.4">Specifying Labels</a>
+</h2>
+
+
+<p>The <code>LABEL</code> directive is used to give names for labels in the disassembled
+code. The following attributes are recognized:</p>
+<p>
+</p><dl>
+
+<dt><b><code>ADDR</code></b></dt><dd>
+<p>Followed by a numerical value. Specifies the value of the label.</p>
+
+</dd><dt><b><code>COMMENT</code></b></dt><dd>
+<p>Attribute argument is a string. The comment will show up in a separate line
+before the label, if the label is within code or data range, or after the
+label if it is outside.</p>
+<p>Example output:</p>
+<p>
+</p><blockquote><code>
+<pre>        foo     := $0001        ; Comment for label named "foo"
+
+        ; Comment for label named "bar"
+        bar:
+</pre>
+</code></blockquote>
+<p></p>
+
+</dd><dt><b><code>NAME</code></b></dt><dd>
+<p>The attribute is followed by a string value which gives the name of the
+label. Empty names are allowed, in this case the disassembler will create
+an unnamed label (see the assembler docs for more information about unnamed
+labels).</p>
+
+</dd><dt><b><code>SIZE</code></b></dt><dd>
+<p>This attribute is optional and may be used to specify the size of the data
+that follows. If a size greater than 1 is specified, the disassembler will
+create labels in the form <code>label+offs</code> for all bytes within the given
+range, where <code>label</code> is the label name given with the <code>NAME</code>
+attribute, and <code>offs</code> is the offset within the data.</p>
+
+</dd><dt><b><code>PARAMSIZE</code></b></dt><dd>
+<p>This optional attribute is followed by a numerical value. It tells the
+assembler that subroutine calls to this label are followed by
+"inline parameters" with the given number of bytes, like this:</p>
+<p>
+</p><blockquote><code>
+<pre>        JSR     LabelWithParamSize2
+        .byte   $00, $10
+        (return here)
+        code...
+</pre>
+</code></blockquote>
+<p></p>
+
+</dd></dl>
+<p></p>
+
+
+<h2><a name="infofile-segment"></a> <a name="ss4.5">4.5</a> <a href="#toc4.5">Specifying Segments</a>
+</h2>
+
+
+<p>The <code>SEGMENT</code> directive is used to specify a segment within the
+disassembled code. The following attributes are recognized:</p>
+<p>
+</p><dl>
+
+<dt><b><code>START</code></b></dt><dd>
+<p>Followed by a numerical value. Specifies the start address of the segment.</p>
+
+</dd><dt><b><code>END</code></b></dt><dd>
+<p>Followed by a numerical value. Specifies the end address of the segment. The
+end address is the last address that is a part of the segment.</p>
+
+</dd><dt><b><code>NAME</code></b></dt><dd>
+<p>The attribute is followed by a string value which gives the name of the
+segment.</p>
+</dd></dl>
+<p></p>
+<p>All attributes are mandatory. Segments must not overlap. The disassembler will
+change back to the (default) <code>.code</code> segment after the end of each defined
+segment. That might not be what you want. As a rule of thumb, if you're using
+segments, you should define segments for all disassembled code.</p>
+
+
+<h2><a name="infofile-asminc"></a> <a name="ss4.6">4.6</a> <a href="#toc4.6">Specifying Assembler Includes</a>
+</h2>
+
+
+<p>The <code>ASMINC</code> directive is used to give the names of input files containing
+symbol assignments in assembler syntax:</p>
+<p>
+</p><blockquote><code>
+<pre>        Name = value
+        Name := value
+</pre>
+</code></blockquote>
+<p></p>
+<p>The usual conventions apply for symbol names. Values may be specified as hex
+(leading $), binary (leading %) or decimal. The values may optionally
+be signed.</p>
+<p>NOTE: The include file parser is very simple. Expressions are not allowed, and
+anything but symbol assignments is flagged as an error (but see the
+<code>IGNOREUNKNOWN</code> directive below).</p>
+<p>The following attributes are recognized:</p>
+<p>
+</p><dl>
+
+<dt><b><code>FILE</code></b></dt><dd>
+<p>Followed by a string value. Specifies the name of the file to read.</p>
+
+</dd><dt><b><code>COMMENTSTART</code></b></dt><dd>
+<p>The optional attribute is followed by a character constant. It specifies the
+character that starts a comment. The default value is a semicolon. This
+value is ignored if <code>IGNOREUNKNOWN</code> is true.</p>
+
+</dd><dt><b><code>IGNOREUNKNOWN</code></b></dt><dd>
+<p>This attribute is optional and is followed by a boolean value. It allows to
+ignore input lines that don't have a valid syntax. This allows to read in
+assembler include files that contain more than just symbol assignments.
+Note: When this attribute is used, the disassembler will ignore any errors
+in the given include file. This may have undesired side effects.</p>
+
+</dd></dl>
+<p></p>
+
+
+<h2><a name="ss4.7">4.7</a> <a href="#toc4.7">An Info File Example</a>
+</h2>
+
+
+<p>The following is a short example for an info file that contains most of the
+directives explained above:</p>
+<p>
+</p><blockquote><code>
+<pre>        # This is a comment. It extends to the end of the line
+        GLOBAL {
+            OUTPUTNAME      "kernal.s";
+            INPUTNAME       "kernal.bin";
+            STARTADDR       $E000;
+            PAGELENGTH      0;                  # No paging
+            CPU             "6502";
+        };
+
+        # One segment for the whole stuff
+        SEGMENT { START $E000;  END   $FFFF; NAME "kernal"; };
+
+        RANGE { START $E612;    END   $E631; TYPE Code;      };
+        RANGE { START $E632;    END   $E640; TYPE ByteTable; };
+        RANGE { START $EA51;    END   $EA84; TYPE RtsTable;  };
+        RANGE { START $EC6C;    END   $ECAB; TYPE RtsTable;  };
+        RANGE { START $ED08;    END   $ED11; TYPE AddrTable; };
+
+        # Zero-page variables
+        LABEL { NAME "fnadr";   ADDR  $90;   SIZE 3;    };
+        LABEL { NAME "sal";     ADDR  $93;   };
+        LABEL { NAME "sah";     ADDR  $94;   };
+        LABEL { NAME "sas";     ADDR  $95;   };
+
+        # Stack
+        LABEL { NAME "stack";   ADDR  $100;  SIZE 255;  };
+
+        # Indirect vectors
+        LABEL { NAME "cinv";    ADDR  $300;  SIZE 2;    };      # IRQ
+        LABEL { NAME "cbinv";   ADDR  $302;  SIZE 2;    };      # BRK
+        LABEL { NAME "nminv";   ADDR  $304;  SIZE 2;    };      # NMI
+
+        # Jump table at end of kernal ROM
+        LABEL { NAME "kscrorg"; ADDR  $FFED; };
+        LABEL { NAME "kplot";   ADDR  $FFF0; };
+        LABEL { NAME "kiobase"; ADDR  $FFF3; };
+        LABEL { NAME "kgbye";   ADDR  $FFF6; };
+
+        # Hardware vectors
+        LABEL { NAME "hanmi";   ADDR  $FFFA; };
+        LABEL { NAME "hares";   ADDR  $FFFC; };
+        LABEL { NAME "hairq";   ADDR  $FFFE; };
+</pre>
+</code></blockquote>
+<p></p>
+
+
+
+<h2><a name="s5">5.</a> <a href="#toc5">Copyright</a></h2>
+
+
+<p>da65 (and all cc65 binutils) is (C) Copyright 1998-2011, Ullrich von
+Bassewitz. For usage of the binaries and/or sources, the following
+conditions do apply:</p>
+<p>This software is provided 'as-is', without any expressed or implied
+warranty.  In no event will the authors be held liable for any damages
+arising from the use of this software.</p>
+<p>Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:</p>
+<p>
+</p><ol>
+<li>  The origin of this software must not be misrepresented; you must not
+claim that you wrote the original software. If you use this software
+in a product, an acknowledgment in the product documentation would be
+appreciated but is not required.</li>
+<li>  Altered source versions must be plainly marked as such, and must not
+be misrepresented as being the original software.</li>
+<li>  This notice may not be removed or altered from any source
+distribution.</li>
+</ol>
+<p></p>
+
+
+
+
+
+</body></html>
